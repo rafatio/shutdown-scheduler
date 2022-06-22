@@ -3,4 +3,13 @@ layout:
 - go.kubebuilder.io/v3
 projectName: scheduled-shutdown
 repo: git.topfreegames.com/rafael.oliveira/scheduled-shutdown
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: io
+  group: wildlife
+  kind: ScheduledShutdown
+  path: git.topfreegames.com/rafael.oliveira/scheduled-shutdown/api/v1alpha1
+  version: v1alpha1
 version: "3"

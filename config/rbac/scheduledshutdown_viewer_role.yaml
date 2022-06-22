@@ -1,0 +1,20 @@
+# permissions for end users to view scheduledshutdowns.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: scheduledshutdown-viewer-role
+rules:
+- apiGroups:
+  - wildlife.io
+  resources:
+  - scheduledshutdowns
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wildlife.io
+  resources:
+  - scheduledshutdowns/status
+  verbs:
+  - get

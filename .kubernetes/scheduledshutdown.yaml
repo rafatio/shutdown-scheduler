@@ -1,0 +1,16 @@
+apiVersion: wildlife.io/v1alpha1
+kind: ScheduledShutdown
+metadata:
+  name: test
+  namespace: hackathon-28-scheduled-shutdown
+spec:
+  resource:
+    apiVersion: v1
+    kind: Deploy
+    name: debug
+    namespace: hackathon28-scheduled-shutdown
+  timeRange:
+  - start: "2022-06-23T20:29:49-03:00"
+    end:  "2022-06-23T02:29:49-03:00"
+  
+    

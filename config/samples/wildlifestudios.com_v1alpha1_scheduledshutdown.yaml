@@ -1,0 +1,6 @@
+apiVersion: wildlife.io/v1alpha1
+kind: ScheduledShutdown
+metadata:
+  name: scheduledshutdown-sample
+spec:
+  # TODO(user): Add fields here
