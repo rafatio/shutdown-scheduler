@@ -1,0 +1,6 @@
+domain: wildlife.io
+layout:
+- go.kubebuilder.io/v3
+projectName: scheduled-shutdown
+repo: git.topfreegames.com/rafael.oliveira/scheduled-shutdown
+version: "3"
