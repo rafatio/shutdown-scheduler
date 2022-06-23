@@ -18,10 +18,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"git.topfreegames.com/rafael.oliveira/shutdown-scheduler/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -34,6 +37,10 @@ type ShutdownSchedulerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const (
+	hourLayout = "15:04"
+)
+
 func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
@@ -43,40 +50,146 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return reconcile.Result{}, err
 	}
 
+	patchHelper, err := patch.NewHelper(shutdownscheduler, r.Client)
+	if err != nil {
+		log.Error(err, "failed to initialize patch helper")
+		return ctrl.Result{}, err
+	}
+
+	defer func() {
+		err = patchHelper.Patch(ctx, shutdownscheduler)
+
+		if err != nil {
+			log.Error(err, "Failed to patch shutdownscheduler")
+		}
+		log.Info(fmt.Sprintf("finished reconcile loop for %s", shutdownscheduler.ObjectMeta.GetName()))
+	}()
+
 	if !shutdownscheduler.Status.Shutdown {
 		for _, timeRange := range shutdownscheduler.Spec.TimeRange {
-			if inTimeSpan(timeRange.Start, timeRange.End, metav1.Now()) {
-				log.Info("Deus existe")
+			if timeInRange(timeRange.WeekDay, timeRange.Start, timeRange.End, time.Now()) {
+
+				if shutdownscheduler.Spec.Resource.Kind == "Deployment" {
+					object := &v1.Deployment{}
+					err := r.Client.Get(ctx, client.ObjectKey{
+						Name:      shutdownscheduler.Spec.Resource.Name,
+						Namespace: shutdownscheduler.Spec.Resource.Namespace,
+					}, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					shutdownscheduler.Status.PreviousReplicas = int(*object.Spec.Replicas)
+
+					if _, ok := object.Annotations["fluxcd.io/sync-checksum"]; ok {
+						object.Annotations["fluxcd.io/ignore"] = "true"
+					}
+					var replicas int32 = 0
+					object.Spec.Replicas = &replicas
+
+					err = r.Client.Update(ctx, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					shutdownscheduler.Status.Shutdown = true
+
+				} else if shutdownscheduler.Spec.Resource.Kind == "StatefulSet" {
+					object := &v1.StatefulSet{}
+					err := r.Client.Get(ctx, client.ObjectKey{
+						Name:      shutdownscheduler.Spec.Resource.Name,
+						Namespace: shutdownscheduler.Spec.Resource.Namespace,
+					}, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					shutdownscheduler.Status.PreviousReplicas = int(*object.Spec.Replicas)
+
+					if _, ok := object.Annotations["fluxcd.io/sync-checksum"]; ok {
+						object.Annotations["fluxcd.io/ignore"] = "true"
+					}
+					var replicas int32 = 0
+					object.Spec.Replicas = &replicas
+
+					err = r.Client.Update(ctx, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					shutdownscheduler.Status.Shutdown = true
+				}
+
+			}
+		}
+	} else {
+		for _, timeRange := range shutdownscheduler.Spec.TimeRange {
+			if !timeInRange(timeRange.WeekDay, timeRange.Start, timeRange.End, time.Now()) {
+				if shutdownscheduler.Spec.Resource.Kind == "Deployment" {
+					object := &v1.Deployment{}
+					err := r.Client.Get(ctx, client.ObjectKey{
+						Name:      shutdownscheduler.Spec.Resource.Name,
+						Namespace: shutdownscheduler.Spec.Resource.Namespace,
+					}, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					delete(object.Annotations, "fluxcd.io/ignore")
+
+					var replicas int32 = int32(shutdownscheduler.Status.PreviousReplicas)
+					object.Spec.Replicas = &replicas
+
+					err = r.Client.Update(ctx, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					shutdownscheduler.Status.Shutdown = false
+
+				} else if shutdownscheduler.Spec.Resource.Kind == "StatefulSet" {
+					object := &v1.StatefulSet{}
+					err := r.Client.Get(ctx, client.ObjectKey{
+						Name:      shutdownscheduler.Spec.Resource.Name,
+						Namespace: shutdownscheduler.Spec.Resource.Namespace,
+					}, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					delete(object.Annotations, "fluxcd.io/ignore")
+
+					var replicas int32 = int32(shutdownscheduler.Status.PreviousReplicas)
+					object.Spec.Replicas = &replicas
+
+					err = r.Client.Update(ctx, object)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					shutdownscheduler.Status.Shutdown = false
+				}
 			}
 		}
 	}
 
-	// if shutdown false
-	// verifica se está na hora de iniciar
-	// pegar replicas e colocar no status previousreplicas
-	// verificar se contem flux e desabilitar
-	// replicas 0
-	// Status shutdown true
-
-	// else
-	// se está na hora de voltar
-	// upscale baseado na previousreplicas
-	// verifica flux e se tiver paused remover
-	// status shutdown false
-
-	log.Info("Sucesso")
-
 	return ctrl.Result{}, nil
 }
 
-func inTimeSpan(start, end, check metav1.Time) bool {
-	if start.Before(&end) {
-		return !check.Before(&start) && !check.After(end.Time)
+func timeInRange(day int, start string, end string, currentTime time.Time) bool {
+	startHour, _ := time.Parse(hourLayout, start)
+	endHour, _ := time.Parse(hourLayout, end)
+	currentHour, _ := time.Parse(hourLayout, currentTime.Format(hourLayout))
+
+	if currentTime.Weekday() != time.Weekday(day) {
+		return false
 	}
-	if start.Equal(&end) {
-		return check.Equal(&start)
+
+	if (currentHour.After(startHour) || currentHour.Equal(startHour)) && currentHour.Before(endHour) {
+		return true
 	}
-	return !start.After(check.Time) || !end.Before(&check)
+
+	return false
 }
 
 // SetupWithManager sets up the controller with the Manager.

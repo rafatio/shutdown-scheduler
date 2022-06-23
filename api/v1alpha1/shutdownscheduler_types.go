@@ -22,8 +22,9 @@ import (
 )
 
 type TimeRange struct {
-	Start metav1.Time `json:"start,omitempty"`
-	End   metav1.Time `json:"end,omitempty"`
+	WeekDay int    `json:"weekDay,omitempty"`
+	Start   string `json:"start,omitempty"`
+	End     string `json:"end,omitempty"`
 }
 
 // ShutdownSchedulerSpec defines the desired state of ShutdownScheduler
