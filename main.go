@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	wildlifestudioscomv1alpha1 "git.topfreegames.com/rafael.oliveira/scheduled-shutdown/api/v1alpha1"
-	"git.topfreegames.com/rafael.oliveira/scheduled-shutdown/controllers"
+	wildlifestudioscomv1alpha1 "git.topfreegames.com/rafael.oliveira/shutdown-scheduler/api/v1alpha1"
+	"git.topfreegames.com/rafael.oliveira/shutdown-scheduler/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -78,11 +78,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ScheduledShutdownReconciler{
+	if err = (&controllers.ShutdownSchedulerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ScheduledShutdown")
+		setupLog.Error(err, "unable to create controller", "controller", "ShutdownScheduler")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

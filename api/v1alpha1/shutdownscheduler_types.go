@@ -26,14 +26,14 @@ type TimeRange struct {
 	End   metav1.Time `json:"end,omitempty"`
 }
 
-// ScheduledShutdownSpec defines the desired state of ScheduledShutdown
-type ScheduledShutdownSpec struct {
+// ShutdownSchedulerSpec defines the desired state of ShutdownScheduler
+type ShutdownSchedulerSpec struct {
 	Resource  *corev1.ObjectReference `json:"resource,omitempty"`
 	TimeRange []*TimeRange            `json:"timeRange,omitempty"`
 }
 
-// ScheduledShutdownStatus defines the observed state of ScheduledShutdown
-type ScheduledShutdownStatus struct {
+// ShutdownSchedulerStatus defines the observed state of ShutdownScheduler
+type ShutdownSchedulerStatus struct {
 	PreviousReplicas int  `json:"previousReplicas,omitempty"`
 	Shutdown         bool `json:"shutdown,omitempty"`
 }
@@ -41,24 +41,24 @@ type ScheduledShutdownStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// ScheduledShutdown is the Schema for the scheduledshutdowns API
-type ScheduledShutdown struct {
+// ShutdownScheduler is the Schema for the shutdownschedulers API
+type ShutdownScheduler struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ScheduledShutdownSpec   `json:"spec,omitempty"`
-	Status ScheduledShutdownStatus `json:"status,omitempty"`
+	Spec   ShutdownSchedulerSpec   `json:"spec,omitempty"`
+	Status ShutdownSchedulerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ScheduledShutdownList contains a list of ScheduledShutdown
-type ScheduledShutdownList struct {
+// ShutdownSchedulerList contains a list of ShutdownScheduler
+type ShutdownSchedulerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ScheduledShutdown `json:"items"`
+	Items           []ShutdownScheduler `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ScheduledShutdown{}, &ScheduledShutdownList{})
+	SchemeBuilder.Register(&ShutdownScheduler{}, &ShutdownSchedulerList{})
 }

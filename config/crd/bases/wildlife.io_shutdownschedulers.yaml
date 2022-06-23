@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
-  name: scheduledshutdowns.wildlife.io
+  name: shutdownschedulers.wildlife.io
 spec:
   group: wildlife.io
   names:
-    kind: ScheduledShutdown
-    listKind: ScheduledShutdownList
-    plural: scheduledshutdowns
-    singular: scheduledshutdown
+    kind: ShutdownScheduler
+    listKind: ShutdownSchedulerList
+    plural: shutdownschedulers
+    singular: shutdownscheduler
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ScheduledShutdown is the Schema for the scheduledshutdowns API
+        description: ShutdownScheduler is the Schema for the shutdownschedulers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ScheduledShutdownSpec defines the desired state of ScheduledShutdown
+            description: ShutdownSchedulerSpec defines the desired state of ShutdownScheduler
             properties:
               resource:
                 description: 'ObjectReference contains enough information to let you
@@ -106,7 +106,7 @@ spec:
                 type: array
             type: object
           status:
-            description: ScheduledShutdownStatus defines the observed state of ScheduledShutdown
+            description: ShutdownSchedulerStatus defines the observed state of ShutdownScheduler
             properties:
               previousReplicas:
                 type: integer

@@ -1,4 +1,4 @@
-module git.topfreegames.com/rafael.oliveira/scheduled-shutdown
+module git.topfreegames.com/rafael.oliveira/shutdown-scheduler
 
 go 1.17
 

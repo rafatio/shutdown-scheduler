@@ -1,13 +1,13 @@
-# permissions for end users to edit scheduledshutdowns.
+# permissions for end users to edit shutdownschedulers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: scheduledshutdown-editor-role
+  name: shutdownscheduler-editor-role
 rules:
 - apiGroups:
   - wildlife.io
   resources:
-  - scheduledshutdowns
+  - shutdownschedulers
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - wildlife.io
   resources:
-  - scheduledshutdowns/status
+  - shutdownschedulers/status
   verbs:
   - get

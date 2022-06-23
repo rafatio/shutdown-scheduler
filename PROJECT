@@ -1,15 +1,15 @@
 domain: wildlife.io
 layout:
 - go.kubebuilder.io/v3
-projectName: scheduled-shutdown
-repo: git.topfreegames.com/rafael.oliveira/scheduled-shutdown
+projectName: shutdown-scheduler
+repo: git.topfreegames.com/rafael.oliveira/shutdown-scheduler
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   domain: io
   group: wildlife
-  kind: ScheduledShutdown
-  path: git.topfreegames.com/rafael.oliveira/scheduled-shutdown/api/v1alpha1
+  kind: ShutdownScheduler
+  path: git.topfreegames.com/rafael.oliveira/shutdown-scheduler/api/v1alpha1
   version: v1alpha1
 version: "3"

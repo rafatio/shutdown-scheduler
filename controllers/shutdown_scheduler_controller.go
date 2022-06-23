@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 
-	"git.topfreegames.com/rafael.oliveira/scheduled-shutdown/api/v1alpha1"
+	"git.topfreegames.com/rafael.oliveira/shutdown-scheduler/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -28,23 +28,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// ScheduledShutdownReconciler reconciles a ScheduledShutdown object
-type ScheduledShutdownReconciler struct {
+// ShutdownSchedulerReconciler reconciles a ShutdownScheduler object
+type ShutdownSchedulerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func (r *ScheduledShutdownReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	scheduledShutdown := &v1alpha1.ScheduledShutdown{}
-	err := r.Client.Get(ctx, req.NamespacedName, scheduledShutdown)
+	shutdownscheduler := &v1alpha1.ShutdownScheduler{}
+	err := r.Client.Get(ctx, req.NamespacedName, shutdownscheduler)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !scheduledShutdown.Status.Shutdown {
-		for _, timeRange := range scheduledShutdown.Spec.TimeRange {
+	if !shutdownscheduler.Status.Shutdown {
+		for _, timeRange := range shutdownscheduler.Spec.TimeRange {
 			if inTimeSpan(timeRange.Start, timeRange.End, metav1.Now()) {
 				log.Info("Deus existe")
 			}
@@ -80,8 +80,8 @@ func inTimeSpan(start, end, check metav1.Time) bool {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ScheduledShutdownReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ShutdownSchedulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.ScheduledShutdown{}).
+		For(&v1alpha1.ShutdownScheduler{}).
 		Complete(r)
 }
