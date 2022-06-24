@@ -34,7 +34,8 @@ import (
 // ShutdownSchedulerReconciler reconciles a ShutdownScheduler object
 type ShutdownSchedulerReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme                *runtime.Scheme
+	BlacklistedNamespaces []string
 }
 
 const (
@@ -43,6 +44,13 @@ const (
 
 func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
+
+	for _, blackListedNamespace := range r.BlacklistedNamespaces {
+		if blackListedNamespace == req.Namespace {
+			log.Info(fmt.Sprintf("skipping %s/%s since it belongs to a blacklisted namespace", req.Namespace, req.Name))
+			return ctrl.Result{}, nil
+		}
+	}
 
 	shutdownscheduler := &v1alpha1.ShutdownScheduler{}
 	err := r.Client.Get(ctx, req.NamespacedName, shutdownscheduler)
