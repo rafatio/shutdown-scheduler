@@ -1,4 +1,4 @@
-module git.topfreegames.com/rafael.oliveira/shutdown-scheduler
+module github.com/rafatio/shutdown-scheduler
 
 go 1.17
 

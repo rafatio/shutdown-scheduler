@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"git.topfreegames.com/rafael.oliveira/shutdown-scheduler/api/v1alpha1"
+	"github.com/rafatio/shutdown-scheduler/api/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
