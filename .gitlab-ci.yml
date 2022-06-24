@@ -4,9 +4,13 @@ docker-build:
   services:
     - docker:dind
   before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - - echo -n $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   script:
     - docker build --pull -t "$CI_REGISTRY_IMAGE" .
+    - docker tag "$CI_REGISTRY_IMAGE":latest "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG"
     - docker push "$CI_REGISTRY_IMAGE"
+    - docker push "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG"
   only:
-    - main
+    - tags
+  except:
+    - branches
