@@ -35,8 +35,9 @@ type ShutdownSchedulerSpec struct {
 
 // ShutdownSchedulerStatus defines the observed state of ShutdownScheduler
 type ShutdownSchedulerStatus struct {
-	PreviousReplicas int  `json:"previousReplicas,omitempty"`
-	Shutdown         bool `json:"shutdown,omitempty"`
+	PreviousReplicas int `json:"previousReplicas,omitempty"`
+	// +optional
+	Shutdown bool `json:"shutdown"`
 }
 
 //+kubebuilder:object:root=true
