@@ -343,7 +343,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: controller:latest
+        image: tfgco/shutdown-scheduler:latest
         livenessProbe:
           httpGet:
             path: /healthz
