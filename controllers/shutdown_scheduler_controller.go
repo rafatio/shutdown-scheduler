@@ -43,6 +43,11 @@ const (
 	hourLayout = "15:04"
 )
 
+// +kubebuilder:rbac:groups="wildlife.io",resources=shutdownschedulers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="wildlife.io",resources=shutdownschedulers/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="apps",resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+
 func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
@@ -63,7 +68,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	finalizerName := "shutdownscheduler.wildlife.io/finalizer"
+	finalizerName := "shutdownschedulers.wildlife.io/finalizer"
 
 	if shutdownscheduler.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(shutdownscheduler, finalizerName) {

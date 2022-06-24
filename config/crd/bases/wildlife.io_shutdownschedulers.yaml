@@ -102,6 +102,9 @@ spec:
                       type: string
                     weekDay:
                       type: integer
+                  required:
+                  - end
+                  - start
                   type: object
                 type: array
             type: object

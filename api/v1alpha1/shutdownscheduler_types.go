@@ -22,9 +22,10 @@ import (
 )
 
 type TimeRange struct {
+	// +kubebuilder:validation:Enum:0;1;2;3;4;5;6
 	WeekDay int    `json:"weekDay,omitempty"`
-	Start   string `json:"start,omitempty"`
-	End     string `json:"end,omitempty"`
+	Start   string `json:"start"`
+	End     string `json:"end"`
 }
 
 // ShutdownSchedulerSpec defines the desired state of ShutdownScheduler
