@@ -50,6 +50,9 @@ const (
 
 func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
+	scheduledResult := ctrl.Result{
+		RequeueAfter: 1 * time.Minute,
+	}
 
 	for _, blackListedNamespace := range r.BlacklistedNamespaces {
 		if blackListedNamespace == req.Namespace {
@@ -74,7 +77,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if !controllerutil.ContainsFinalizer(shutdownscheduler, finalizerName) {
 			controllerutil.AddFinalizer(shutdownscheduler, finalizerName)
 			if err := r.Update(ctx, shutdownscheduler); err != nil {
-				return ctrl.Result{}, err
+				return scheduledResult, err
 			}
 		}
 	} else {
@@ -97,7 +100,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	patchHelper, err := patch.NewHelper(shutdownscheduler, r.Client)
 	if err != nil {
 		log.Error(err, "failed to initialize patch helper")
-		return ctrl.Result{}, err
+		return scheduledResult, err
 	}
 
 	defer func() {
@@ -121,7 +124,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					}, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return ctrl.Result{}, err
+						return scheduledResult, err
 					}
 
 					shutdownscheduler.Status.PreviousReplicas = int(*object.Spec.Replicas)
@@ -135,7 +138,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					err = r.Update(ctx, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return ctrl.Result{}, err
+						return scheduledResult, err
 					}
 
 					shutdownscheduler.Status.Shutdown = true
@@ -148,7 +151,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					}, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return ctrl.Result{}, err
+						return scheduledResult, err
 					}
 
 					shutdownscheduler.Status.PreviousReplicas = int(*object.Spec.Replicas)
@@ -162,7 +165,7 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					err = r.Update(ctx, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return ctrl.Result{}, err
+						return scheduledResult, err
 					}
 
 					shutdownscheduler.Status.Shutdown = true
@@ -182,11 +185,11 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		err := r.upScaleLogic(ctx, *shutdownscheduler, shouldUpscale)
 		if err != nil {
 			log.Error(err, err.Error())
-			return ctrl.Result{}, err
+			return scheduledResult, err
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return scheduledResult, nil
 }
 
 func (r *ShutdownSchedulerReconciler) upScaleLogic(ctx context.Context, shutdownscheduler v1alpha1.ShutdownScheduler, shouldUpscale bool) error {
