@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ShutdownSchedulerReconciler reconciles a ShutdownScheduler object
@@ -53,10 +53,36 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	shutdownscheduler := &v1alpha1.ShutdownScheduler{}
-	err := r.Client.Get(ctx, req.NamespacedName, shutdownscheduler)
+	err := r.Get(ctx, req.NamespacedName, shutdownscheduler)
 	if err != nil {
 		log.Error(err, err.Error())
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
+	}
+
+	finalizerName := "shutdownscheduler.wildlife.io/finalizer"
+
+	if shutdownscheduler.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(shutdownscheduler, finalizerName) {
+			controllerutil.AddFinalizer(shutdownscheduler, finalizerName)
+			if err := r.Update(ctx, shutdownscheduler); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(shutdownscheduler, finalizerName) {
+			err := r.upScaleLogic(ctx, *shutdownscheduler, true)
+			if err != nil {
+				log.Error(err, err.Error())
+				return ctrl.Result{}, err
+			}
+
+			controllerutil.RemoveFinalizer(shutdownscheduler, finalizerName)
+			if err := r.Update(ctx, shutdownscheduler); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		return ctrl.Result{}, nil
 	}
 
 	patchHelper, err := patch.NewHelper(shutdownscheduler, r.Client)
@@ -80,13 +106,13 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 				if shutdownscheduler.Spec.Resource.Kind == "Deployment" {
 					object := &v1.Deployment{}
-					err := r.Client.Get(ctx, client.ObjectKey{
+					err := r.Get(ctx, client.ObjectKey{
 						Name:      shutdownscheduler.Spec.Resource.Name,
 						Namespace: shutdownscheduler.Spec.Resource.Namespace,
 					}, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return reconcile.Result{}, err
+						return ctrl.Result{}, err
 					}
 
 					shutdownscheduler.Status.PreviousReplicas = int(*object.Spec.Replicas)
@@ -97,23 +123,23 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					var replicas int32 = 0
 					object.Spec.Replicas = &replicas
 
-					err = r.Client.Update(ctx, object)
+					err = r.Update(ctx, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return reconcile.Result{}, err
+						return ctrl.Result{}, err
 					}
 
 					shutdownscheduler.Status.Shutdown = true
 
 				} else if shutdownscheduler.Spec.Resource.Kind == "StatefulSet" {
 					object := &v1.StatefulSet{}
-					err := r.Client.Get(ctx, client.ObjectKey{
+					err := r.Get(ctx, client.ObjectKey{
 						Name:      shutdownscheduler.Spec.Resource.Name,
 						Namespace: shutdownscheduler.Spec.Resource.Namespace,
 					}, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return reconcile.Result{}, err
+						return ctrl.Result{}, err
 					}
 
 					shutdownscheduler.Status.PreviousReplicas = int(*object.Spec.Replicas)
@@ -124,10 +150,10 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					var replicas int32 = 0
 					object.Spec.Replicas = &replicas
 
-					err = r.Client.Update(ctx, object)
+					err = r.Update(ctx, object)
 					if err != nil {
 						log.Error(err, err.Error())
-						return reconcile.Result{}, err
+						return ctrl.Result{}, err
 					}
 
 					shutdownscheduler.Status.Shutdown = true
@@ -144,59 +170,70 @@ func (r *ShutdownSchedulerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 		}
 
-		if shouldUpscale {
-			if shutdownscheduler.Spec.Resource.Kind == "Deployment" {
-				object := &v1.Deployment{}
-				err := r.Client.Get(ctx, client.ObjectKey{
-					Name:      shutdownscheduler.Spec.Resource.Name,
-					Namespace: shutdownscheduler.Spec.Resource.Namespace,
-				}, object)
-				if err != nil {
-					log.Error(err, err.Error())
-					return reconcile.Result{}, err
-				}
-
-				delete(object.Annotations, "fluxcd.io/ignore")
-
-				var replicas int32 = int32(shutdownscheduler.Status.PreviousReplicas)
-				object.Spec.Replicas = &replicas
-
-				err = r.Client.Update(ctx, object)
-				if err != nil {
-					log.Error(err, err.Error())
-					return reconcile.Result{}, err
-				}
-
-				shutdownscheduler.Status.Shutdown = false
-
-			} else if shutdownscheduler.Spec.Resource.Kind == "StatefulSet" {
-				object := &v1.StatefulSet{}
-				err := r.Client.Get(ctx, client.ObjectKey{
-					Name:      shutdownscheduler.Spec.Resource.Name,
-					Namespace: shutdownscheduler.Spec.Resource.Namespace,
-				}, object)
-				if err != nil {
-					log.Error(err, err.Error())
-					return reconcile.Result{}, err
-				}
-
-				delete(object.Annotations, "fluxcd.io/ignore")
-
-				var replicas int32 = int32(shutdownscheduler.Status.PreviousReplicas)
-				object.Spec.Replicas = &replicas
-
-				err = r.Client.Update(ctx, object)
-				if err != nil {
-					log.Error(err, err.Error())
-					return reconcile.Result{}, err
-				}
-
-				shutdownscheduler.Status.Shutdown = false
-			}
+		err := r.upScaleLogic(ctx, *shutdownscheduler, shouldUpscale)
+		if err != nil {
+			log.Error(err, err.Error())
+			return ctrl.Result{}, err
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ShutdownSchedulerReconciler) upScaleLogic(ctx context.Context, shutdownscheduler v1alpha1.ShutdownScheduler, shouldUpscale bool) error {
+	log := log.FromContext(ctx)
+
+	if shouldUpscale {
+		if shutdownscheduler.Spec.Resource.Kind == "Deployment" {
+			object := &v1.Deployment{}
+			err := r.Get(ctx, client.ObjectKey{
+				Name:      shutdownscheduler.Spec.Resource.Name,
+				Namespace: shutdownscheduler.Spec.Resource.Namespace,
+			}, object)
+			if err != nil {
+				log.Error(err, err.Error())
+				return err
+			}
+
+			delete(object.Annotations, "fluxcd.io/ignore")
+
+			var replicas int32 = int32(shutdownscheduler.Status.PreviousReplicas)
+			object.Spec.Replicas = &replicas
+
+			err = r.Update(ctx, object)
+			if err != nil {
+				log.Error(err, err.Error())
+				return err
+			}
+
+			shutdownscheduler.Status.Shutdown = false
+
+		} else if shutdownscheduler.Spec.Resource.Kind == "StatefulSet" {
+			object := &v1.StatefulSet{}
+			err := r.Get(ctx, client.ObjectKey{
+				Name:      shutdownscheduler.Spec.Resource.Name,
+				Namespace: shutdownscheduler.Spec.Resource.Namespace,
+			}, object)
+			if err != nil {
+				log.Error(err, err.Error())
+				return err
+			}
+
+			delete(object.Annotations, "fluxcd.io/ignore")
+
+			var replicas int32 = int32(shutdownscheduler.Status.PreviousReplicas)
+			object.Spec.Replicas = &replicas
+
+			err = r.Update(ctx, object)
+			if err != nil {
+				log.Error(err, err.Error())
+				return err
+			}
+
+			shutdownscheduler.Status.Shutdown = false
+		}
+	}
+	return nil
 }
 
 func timeInRange(day int, start string, end string, currentTime time.Time) bool {
